@@ -4,7 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../supabase";
 import dynamic from "next/dynamic";
 
-const MapView = dynamic(() => import("./MapView"), { ssr: false });
+const MapView = dynamic(() => import("./MapView"), {
+  ssr: false,
+  loading: () => (
+    <div style={{ marginTop: 15, fontSize: 12, opacity: 0.7 }}>
+      Cargando mapa…
+    </div>
+  ),
+});
 
 type Task = {
   id: number;
@@ -58,7 +65,7 @@ export default function Home() {
         setLat(null);
         setLng(null);
       },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
     );
   }, []);
 
