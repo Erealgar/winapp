@@ -177,11 +177,17 @@ export default function Home() {
       </div>
 
       <input
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder="Ej: arreglar persiana"
-        style={{ width: "100%", padding: 10, marginTop: 20 }}
-      />
+  value={text}
+  onChange={(e) => setText(e.target.value)}
+  onKeyDown={(e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      publicar();
+    }
+  }}
+  placeholder="Ej: arreglar persiana"
+  style={{ width: "100%", padding: 10, marginTop: 20 }}
+/>
 
       <button
         onClick={publicar}
