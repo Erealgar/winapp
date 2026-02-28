@@ -25,6 +25,9 @@ function distanciaKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+const RADIOS_KM = [1, 3, 5, 10, 25, 50, 100, 200, 500] as const;
+type RadioKm = (typeof RADIOS_KM)[number];
+
 export default function Home() {
   const [text, setText] = useState("");
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -33,7 +36,7 @@ export default function Home() {
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
 
-  const [radioKm, setRadioKm] = useState(5);
+  const [radioKm, setRadioKm] = useState<RadioKm>(5);
 
   // GPS (intento inicial)
   useEffect(() => {
@@ -52,7 +55,7 @@ export default function Home() {
         setLat(null);
         setLng(null);
       },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0  }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
   }, []);
 
@@ -76,7 +79,7 @@ export default function Home() {
     return () => clearInterval(timer);
   }, []);
 
-  // ✅ publicar: obtiene coordenadas "en el momento" (arregla móvil si el state aún está null)
+  // publicar: obtiene coordenadas "en el momento" (arregla móvil si el state aún está null)
   async function publicar() {
     const t = text.trim();
     if (t.length < 3) return;
@@ -125,7 +128,7 @@ export default function Home() {
     cargar();
   }
 
-  // 🗑️ borrar publicación
+  // borrar publicación
   async function borrar(id: number) {
     if (!confirm("¿Eliminar esta publicación?")) return;
 
@@ -159,16 +162,18 @@ export default function Home() {
       </div>
 
       <div style={{ marginTop: 10 }}>
+        <div style={{ color: "red", fontWeight: 700 }}>RADIO OPTIONS v2</div>
+
         Radio:{" "}
         <select
           value={radioKm}
-          onChange={(e) => setRadioKm(Number(e.target.value))}
+          onChange={(e) => setRadioKm(parseInt(e.target.value, 10) as RadioKm)}
         >
-          <option value={1}>1 km</option>
-          <option value={3}>3 km</option>
-          <option value={5}>5 km</option>
-          <option value={10}>10 km</option>
-          <option value={25}>25 km</option>
+          {RADIOS_KM.map((km) => (
+            <option key={km} value={km}>
+              {km} km
+            </option>
+          ))}
         </select>
       </div>
 
@@ -196,16 +201,20 @@ export default function Home() {
         {loading ? "Publicando..." : "Publicar"}
       </button>
 
-      <h2 style={{ marginTop: 30 }}>
-        Necesidades (filtradas por {radioKm} km)
-      </h2>
+      <h2 style={{ marginTop: 30 }}>Necesidades (filtradas por {radioKm} km)</h2>
 
       {tareasFiltradas.map((t) => (
         <div
           key={t.id}
           style={{ border: "1px solid #ccc", padding: 10, marginTop: 10 }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 10,
+            }}
+          >
             <div>{t.text}</div>
 
             <button
