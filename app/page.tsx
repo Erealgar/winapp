@@ -52,7 +52,7 @@ export default function Home() {
         setLat(null);
         setLng(null);
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0  }
     );
   }, []);
 
@@ -125,6 +125,21 @@ export default function Home() {
     cargar();
   }
 
+  // 🗑️ borrar publicación
+  async function borrar(id: number) {
+    if (!confirm("¿Eliminar esta publicación?")) return;
+
+    const { error } = await supabase.from("tasks").delete().eq("id", id);
+
+    if (error) {
+      console.error("Error borrar:", error.message);
+      alert("No se pudo borrar. (Mira consola / RLS en Supabase)");
+      return;
+    }
+
+    cargar();
+  }
+
   const tareasFiltradas = useMemo(() => {
     if (lat === null || lng === null) return tasks;
 
@@ -190,8 +205,24 @@ export default function Home() {
           key={t.id}
           style={{ border: "1px solid #ccc", padding: 10, marginTop: 10 }}
         >
-          <div>{t.text}</div>
-          <div style={{ fontSize: 12, opacity: 0.6 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+            <div>{t.text}</div>
+
+            <button
+              onClick={() => borrar(t.id)}
+              style={{
+                border: "1px solid #ccc",
+                background: "white",
+                cursor: "pointer",
+                padding: "2px 8px",
+              }}
+              title="Eliminar"
+            >
+              🗑️
+            </button>
+          </div>
+
+          <div style={{ fontSize: 12, opacity: 0.6, marginTop: 6 }}>
             {new Date(t.created_at).toLocaleString()}
           </div>
         </div>
