@@ -1,7 +1,8 @@
 "use client";
 
 import "leaflet/dist/leaflet.css";
-import { MapContainer, TileLayer, Circle, Marker } from "react-leaflet";
+import { useEffect } from "react";
+import { MapContainer, TileLayer, Circle, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
 
 // Fix icon (en Next/Vercel a veces no se ve el marcador)
@@ -15,6 +16,16 @@ const DefaultIcon = L.icon({
 });
 
 L.Marker.prototype.options.icon = DefaultIcon;
+
+function Recenter({ lat, lng }: { lat: number; lng: number }) {
+  const map = useMap();
+
+  useEffect(() => {
+    map.setView([lat, lng]);
+  }, [lat, lng, map]);
+
+  return null;
+}
 
 export default function MapView({
   lat,
@@ -41,8 +52,14 @@ export default function MapView({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
+        <Recenter lat={lat} lng={lng} />
+
         <Marker position={center} />
-        <Circle center={center} radius={radiusMeters} pathOptions={{ fillOpacity: 0.2 }} />
+        <Circle
+          center={center}
+          radius={radiusMeters}
+          pathOptions={{ fillOpacity: 0.2 }}
+        />
       </MapContainer>
     </div>
   );
