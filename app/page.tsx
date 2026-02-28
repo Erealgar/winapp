@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../supabase";
+import dynamic from "next/dynamic";
+
+const MapView = dynamic(() => import("./MapView"), { ssr: false });
 
 type Task = {
   id: number;
@@ -157,9 +160,13 @@ export default function Home() {
       <h1>Necesidades cerca</h1>
 
       {/* Debug temporal */}
-      <div style={{ fontSize: 12, opacity: 0.7 }}>
-        lat={lat ?? "null"} lng={lng ?? "null"}
-      </div>
+     {lat !== null && lng !== null ? (
+  <MapView lat={lat} lng={lng} radioKm={radioKm} />
+) : (
+  <div style={{ marginTop: 10, fontSize: 12, opacity: 0.7 }}>
+    Ubicación no disponible (permite GPS).
+  </div>
+)}
 
       <div style={{ marginTop: 10 }}>
 
