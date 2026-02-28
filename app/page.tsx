@@ -162,7 +162,6 @@ export default function Home() {
       </div>
 
       <div style={{ marginTop: 10 }}>
-        <div style={{ color: "red", fontWeight: 700 }}>RADIO OPTIONS v2</div>
 
         Radio:{" "}
         <select
