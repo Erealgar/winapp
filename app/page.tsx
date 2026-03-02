@@ -115,6 +115,24 @@ export default function Home() {
     if (r.error) alert(r.error.message);
   }
 
+  async function crearCuenta() {
+    const email = prompt("Email:");
+    const password = prompt("Password (mín. 6):");
+    if (!email || !password) return;
+
+    const r = await supabase.auth.signUp({ email, password });
+
+    if (r.error) {
+      alert(r.error.message);
+      return;
+    }
+
+    // según configuración de Supabase puede pedir confirmación por email
+    alert(
+      "Cuenta creada. Si no te inicia sesión, revisa tu email (confirmación) y luego entra."
+    );
+  }
+
   async function salir() {
     await supabase.auth.signOut();
   }
@@ -212,7 +230,10 @@ export default function Home() {
             <button onClick={salir}>Salir</button>
           </>
         ) : (
-          <button onClick={entrar}>Entrar</button>
+          <>
+            <button onClick={entrar}>Entrar</button>
+            <button onClick={crearCuenta}>Crear cuenta</button>
+          </>
         )}
       </div>
 
