@@ -19,6 +19,7 @@ type Task = {
   created_at: string;
   lat: number | null;
   lng: number | null;
+  user_id: string | null;
 };
 
 function distanciaKm(lat1: number, lng1: number, lat2: number, lng2: number) {
@@ -48,6 +49,21 @@ export default function Home() {
 
   const [radioKm, setRadioKm] = useState<RadioKm>(5);
 
+  // Auth user
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUserId(data.user?.id ?? null);
+    });
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUserId(session?.user?.id ?? null);
+    });
+
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
   // GPS (intento inicial)
   useEffect(() => {
     if (!("geolocation" in navigator)) {
@@ -72,7 +88,7 @@ export default function Home() {
   async function cargar() {
     const { data, error } = await supabase
       .from("tasks")
-      .select("id,text,created_at,lat,lng")
+      .select("id,text,created_at,lat,lng,user_id")
       .order("id", { ascending: false });
 
     if (error) {
@@ -89,10 +105,29 @@ export default function Home() {
     return () => clearInterval(timer);
   }, []);
 
-  // publicar: obtiene coordenadas "en el momento" (arregla móvil si el state aún está null)
+  // Login simple (temporal)
+  async function entrar() {
+    const email = prompt("Email:");
+    const password = prompt("Password:");
+    if (!email || !password) return;
+
+    const r = await supabase.auth.signInWithPassword({ email, password });
+    if (r.error) alert(r.error.message);
+  }
+
+  async function salir() {
+    await supabase.auth.signOut();
+  }
+
+  // publicar: obtiene coordenadas "en el momento"
   async function publicar() {
     const t = text.trim();
     if (t.length < 3) return;
+
+    if (!userId) {
+      alert("Tienes que iniciar sesión para publicar.");
+      return;
+    }
 
     setLoading(true);
 
@@ -112,7 +147,7 @@ export default function Home() {
       }
     );
 
-    // actualiza el estado si las obtuvo (para que filtre bien después)
+    // actualiza el estado si las obtuvo
     if (coords.lat !== null && coords.lng !== null) {
       setLat(coords.lat);
       setLng(coords.lng);
@@ -123,6 +158,7 @@ export default function Home() {
         text: t,
         lat: coords.lat,
         lng: coords.lng,
+        user_id: userId,
       },
     ]);
 
@@ -130,7 +166,7 @@ export default function Home() {
 
     if (error) {
       console.error("Error insertar:", error.message);
-      alert("Error al publicar (mira consola).");
+      alert("Error al publicar: " + error.message);
       return;
     }
 
@@ -138,7 +174,7 @@ export default function Home() {
     cargar();
   }
 
-  // borrar publicación
+  // borrar publicación (RLS ya impide borrar las de otros)
   async function borrar(id: number) {
     if (!confirm("¿Eliminar esta publicación?")) return;
 
@@ -146,7 +182,7 @@ export default function Home() {
 
     if (error) {
       console.error("Error borrar:", error.message);
-      alert("No se pudo borrar. (Mira consola / RLS en Supabase)");
+      alert("No se pudo borrar: " + error.message);
       return;
     }
 
@@ -166,17 +202,29 @@ export default function Home() {
     <main style={{ maxWidth: 700, margin: "40px auto", fontFamily: "Arial" }}>
       <h1>Necesidades cerca</h1>
 
-      {/* Debug temporal */}
-     {lat !== null && lng !== null ? (
-  <MapView lat={lat} lng={lng} radioKm={radioKm} />
-) : (
-  <div style={{ marginTop: 10, fontSize: 12, opacity: 0.7 }}>
-    Ubicación no disponible (permite GPS).
-  </div>
-)}
+      {/* Auth UI temporal */}
+      <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
+        {userId ? (
+          <>
+            <div style={{ fontSize: 12, opacity: 0.7, alignSelf: "center" }}>
+              Sesión iniciada
+            </div>
+            <button onClick={salir}>Salir</button>
+          </>
+        ) : (
+          <button onClick={entrar}>Entrar</button>
+        )}
+      </div>
+
+      <MapView lat={lat ?? 39.57} lng={lng ?? 2.65} radioKm={radioKm} />
+
+      {lat === null || lng === null ? (
+        <div style={{ marginTop: 10, fontSize: 12, opacity: 0.7 }}>
+          Obteniendo ubicación…
+        </div>
+      ) : null}
 
       <div style={{ marginTop: 10 }}>
-
         Radio:{" "}
         <select
           value={radioKm}
@@ -191,17 +239,17 @@ export default function Home() {
       </div>
 
       <input
-  value={text}
-  onChange={(e) => setText(e.target.value)}
-  onKeyDown={(e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      publicar();
-    }
-  }}
-  placeholder="Ej: arreglar persiana"
-  style={{ width: "100%", padding: 10, marginTop: 20 }}
-/>
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            publicar();
+          }
+        }}
+        placeholder="Ej: iPhone 15 Pro"
+        style={{ width: "100%", padding: 10, marginTop: 20 }}
+      />
 
       <button
         onClick={publicar}
@@ -236,18 +284,21 @@ export default function Home() {
           >
             <div>{t.text}</div>
 
-            <button
-              onClick={() => borrar(t.id)}
-              style={{
-                border: "1px solid #ccc",
-                background: "white",
-                cursor: "pointer",
-                padding: "2px 8px",
-              }}
-              title="Eliminar"
-            >
-              🗑️
-            </button>
+            {/* Papelera SOLO si es del usuario */}
+            {userId && t.user_id === userId ? (
+              <button
+                onClick={() => borrar(t.id)}
+                style={{
+                  border: "1px solid #ccc",
+                  background: "white",
+                  cursor: "pointer",
+                  padding: "2px 8px",
+                }}
+                title="Eliminar"
+              >
+                🗑️
+              </button>
+            ) : null}
           </div>
 
           <div style={{ fontSize: 12, opacity: 0.6, marginTop: 6 }}>
